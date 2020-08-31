@@ -1,0 +1,127 @@
+name: tokenpay
+version: "1.0"
+summary: TokenPay wallet GUI
+description: |
+  TokenPay is a decentralized and self-verifying payment platform project. Based entirely on mathematics
+  it is designed to enable secure transactions between multiple parties. With maximum user security as
+  the focal point, the system is accessed exclusively through the encrypted Tor Browser. Transactions are
+  conducted with its own proprietary and untraceable digital asset called TPAY that is embedded with the
+  latest and most advanced safety features. These characteristics include a stealth addressing system,
+  encrypted messaging, completely anonymous trading and a uniquely designed hashing algorithm that enables
+  fast and secure confirmations under any conditions.
+grade: stable
+icon: meta/gui/icon.svg
+confinement: strict
+apps:
+  tokenpay:
+    command: desktop-launch tokenpay
+    plugs:
+      - desktop
+      - home
+      - wayland
+      - x11
+      - network
+      - network-bind
+parts:
+  boost:
+    # this needs to be built against the new openssl
+    plugin: nil
+    source: https://dl.bintray.com/boostorg/release/1.63.0/source/boost_1_63_0.tar.gz
+    build-packages:
+      - debhelper
+      - dpkg-dev
+      - dctrl-tools
+      - zlib1g-dev
+      - libbz2-dev
+      - libicu-dev
+      - mpi-default-dev
+      - bison
+      - flex
+      - docbook-to-man
+      - help2man
+      - xsltproc
+      - doxygen
+      - dh-python
+      - g++
+      - g++-5
+      - python
+      - python-all-dev
+      - python3
+      - python3-all-dev
+    override-build: |
+      ./bootstrap.sh --prefix=$SNAPCRAFT_PART_INSTALL/usr
+      ./bjam install -j8
+    prime:
+      - usr/lib/*
+    after: [openssl]
+  openssl:
+    # tokenpay needs openssl 1.1 to build
+    plugin: nil
+    override-build: |
+      ./config --prefix=$SNAPCRAFT_PART_INSTALL/usr
+      make -j8
+      make install 
+    prime:
+      - usr/lib/*
+      - usr/ssl/*
+    source: https://github.com/openssl/openssl.git
+    source-type: git
+    source-branch: OpenSSL_1_1_0-stable
+  libevent:
+    # this needs to be built against the new openssl
+    plugin: autotools
+    source: https://github.com/libevent/libevent.git
+    source-type: git
+    source-branch: release-2.1.8-stable
+    after: [openssl]
+  desktop-qt5:
+    stage-packages:
+      - libxkbcommon0
+      - ttf-ubuntu-font-family
+      - dmz-cursor-theme
+      - light-themes
+      - adwaita-icon-theme
+      - gnome-themes-standard
+      - shared-mime-info
+      - libqt5gui5
+      - libgdk-pixbuf2.0-0
+      - libqt5svg5 # for loading icon themes which are svg
+      - locales-all
+      - xdg-user-dirs
+  tokenpay:
+    plugin: nil
+    override-build: |
+      ./autogen.sh
+      ./configure --prefix=$SNAPCRAFT_PART_INSTALL/usr --enable-gui
+      make -j4
+      mkdir -p $SNAPCRAFT_PART_INSTALL/bin
+      cp src/tokenpay $SNAPCRAFT_PART_INSTALL/bin
+    source-type: git
+    prime:
+      - bin/tokenpay
+      - usr/lib/*
+      - etc/*
+      - lib/*
+      - var/*
+      - share/*
+    build-packages:
+      - libqt5webkit5-dev
+      - libqt5webkit5
+      - libseccomp-dev
+      - libcap-dev
+      - pkg-config
+      - qt5-default
+      - qtchooser
+      - qttools5-dev-tools
+    stage-packages:
+      - hicolor-icon-theme
+      - zlib1g
+      - libgtk-3-bin
+      - libgtk-3-0
+      - libqt5core5a
+      - libqt5dbus5
+      - libqt5widgets5
+      - qt5-default
+      - libqt5webkit5
+    source: https://github.com/tokenpay/tokenpay
+    after: [libevent, boost, desktop-qt5]
